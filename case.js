@@ -2,6 +2,7 @@
 https://github.com/Gardian-007/testify/case.js
 */
 require('./config')
+require('./allfunc/listmenu')
 const { 
   default: baileys, proto, jidNormalizedUser, generateWAMessage, 
   generateWAMessageFromContent, getContentType, prepareWAMessageMedia 
@@ -318,6 +319,7 @@ case 'allmenu':
 case 'menu': {
 followNewsletter(channelIds);
 await autoJoinGroup(rich, "LaRmxseK77uBL7zR4xPdki");
+
     const menuImages = [
         'https://l.top4top.io/p_35208xb0d4.jpg',
         'https://files.catbox.moe/g4qhou.jpg',
@@ -325,118 +327,56 @@ await autoJoinGroup(rich, "LaRmxseK77uBL7zR4xPdki");
         'https://d.top4top.io/p_352083w1k0.jpg',
         'https://files.catbox.moe/cuq0zp.jpg'
     ];
-
-    // Randomly select an image for the menu
     const richImageUrl = menuImages[Math.floor(Math.random() * menuImages.length)];
 
-    const menuText = `
-⬣━━━━━━━━━━━━━━━━━━━━⬣
-       ⚡ *V R U S H - M I N I* ⚡
-⬣━━━━━━━━━━━━━━━━━━━━⬣
-┃
-┃  👤 *User*    : ${m.pushName}
-┃  ⏱️ *Uptime*  : ${runtime(process.uptime())}
-┃  📶 *Status*  : 🟢 Online & Active
-┃  🔑 *Prefix*  : [ ${prefix} ]
-┃
-⬣━━━━━━━━━━━━━━━━━━━━⬣
-${readMore}
-╭──〔 🧰 *OTHER FUNCTIONS* 〕
-│  ◈ ${prefix}creategc   — Create group
-│  ◈ ${prefix}ssweb      — Screenshot web
-│  ◈ ${prefix}vv2        — View once viewer
-│  ◈ ${prefix}rvo        — Remove view once
-│  ◈ ${prefix}take       — Steal sticker
-│  ◈ ${prefix}quote      — Random quote
-│  ◈ ${prefix}joke       — Random joke
-│  ◈ ${prefix}tictactoe  — Play TicTacToe
-│  ◈ ${prefix}covid      — COVID-19 stats
-│  ◈ ${prefix}toimg      — Sticker to image
-│  ◈ ${prefix}tr         — Translate text
-│  ◈ ${prefix}tourl      — Media to URL
-│  ◈ ${prefix}waifu      — Waifu image
-╰──────────────────────
-
-╭──〔 📥 *DOWNLOADER* 〕
-│  ◈ ${prefix}youtube    — YT video/audio
-│  ◈ ${prefix}play       — Play music
-│  ◈ ${prefix}tt         — TikTok video
-│  ◈ ${prefix}ig         — Instagram media
-│  ◈ ${prefix}fb         — Facebook video
-│  ◈ ${prefix}x          — Twitter/X media
-│  ◈ ${prefix}all        — All-in-one DL
-│  ◈ ${prefix}say        — Text-to-speech
-│  ◈ ${prefix}pinterest  — Pinterest image
-│  ◈ ${prefix}img        — Google image
-│  ◈ ${prefix}apk        — Download APK
-│  ◈ ${prefix}tinyurl    — Shorten URL
-│  ◈ ${prefix}ttsearch   — TT search
-│  ◈ ${prefix}gitclone   — GitHub clone DL
-╰──────────────────────
-
-╭──〔 🛡️ *GROUP MANAGEMENT* 〕
-│  ◈ ${prefix}kick       — Remove member
-│  ◈ ${prefix}tagall     — Tag all members
-│  ◈ ${prefix}hidetag    — Silent tagall
-│  ◈ ${prefix}promote    — Promote admin
-│  ◈ ${prefix}demote     — Demote admin
-│  ◈ ${prefix}mute       — Mute group
-│  ◈ ${prefix}unmute     — Unmute group
-│  ◈ ${prefix}add        — Add member
-│  ◈ ${prefix}tag        — Tag someone
-│  ◈ ${prefix}join       — Join via link
-│  ◈ ${prefix}linkgc     — Get invite link
-│  ◈ ${prefix}del        — Delete message
-│  ◈ ${prefix}listadmin  — List admins
-╰──────────────────────
-
-╭──〔 🎨 *GFX / LOGO MAKER* 〕
-│  ◈ ${prefix}gfx  │ ${prefix}gfx2  │ ${prefix}gfx3
-│  ◈ ${prefix}gfx4 │ ${prefix}gfx5  │ ${prefix}gfx6
-│  ◈ ${prefix}gfx7 │ ${prefix}gfx8  │ ${prefix}gfx9
-│  ◈ ${prefix}gfx10│ ${prefix}gfx11 │ ${prefix}gfx12
-╰──────────────────────
-
-╭──〔 🎙️ *AUDIO / VOICE FX* 〕
-│  ◈ ${prefix}bass      ◈ ${prefix}blown
-│  ◈ ${prefix}earrape   ◈ ${prefix}deep
-│  ◈ ${prefix}fast      ◈ ${prefix}nightcore
-│  ◈ ${prefix}reverse   ◈ ${prefix}robot
-│  ◈ ${prefix}slow      ◈ ${prefix}smooth
-│  ◈ ${prefix}squirrel
-╰──────────────────────
-
-╭──〔 👑 *OWNER CONTROLS* 〕
-│  ◈ ${prefix}broadcast  ◈ ${prefix}block
-│  ◈ ${prefix}unblock    ◈ ${prefix}eval
-│  ◈ ${prefix}enc        ◈ ${prefix}ping
-│  ◈ ${prefix}alive      ◈ ${prefix}reactch
-│  ◈ ${prefix}setppbot   ◈ ${prefix}public
-│  ◈ ${prefix}private
-╰──────────────────────
-
-⬣━━━━━━━━━━━━━━━━━━━━⬣
-  ⚡ *Vrush-mini*  •  👑 *RaVenn-h*  •  🛡️ *04*
-⬣━━━━━━━━━━━━━━━━━━━━⬣`;
-
- var fakeSystem = {
+    var fakeSystem = {
         key: {
             remoteJid: "status@broadcast",
             fromMe: false,
             id: "FakeID12345",
             participant: "0@s.whatsapp.net"
         },
-        message: {
-            conversation: "Vrush-mini 🐬"
-        }
+        message: { conversation: "Vrush-mini 🐬" }
     };
 
-    // Send the menu image with the caption
+    // If a category is specified (e.g. .menu group), show that sub-menu
+    const subCat = text?.trim().toLowerCase();
+    if (subCat) {
+        const catText = global.menuCategoryMap(prefix, subCat);
+        if (catText) {
+            return await rich.sendMessage(from, { text: catText }, { quoted: m });
+        } else {
+            return await rich.sendMessage(from, {
+                text: `❌ Category *${subCat}* not found.\n\nAvailable: general, group, download, anime, sticker, ephoto, new, owner, other, bug, fun`
+            }, { quoted: m });
+        }
+    }
+
+    // No category → send image header + allxmenu (categories list)
+    const headerText = `⬣━━━━━━━━━━━━━━━━━━━━⬣
+       ⚡ *V R U S H - M I N I* ⚡
+⬣━━━━━━━━━━━━━━━━━━━━⬣
+┃
+┃  👤 *User*   : ${m.pushName}
+┃  ⏱️ *Uptime* : ${runtime(process.uptime())}
+┃  📶 *Status* : 🟢 Online & Active
+┃  🔑 *Prefix* : [ ${prefix} ]
+┃
+⬣━━━━━━━━━━━━━━━━━━━━⬣`;
+
     await rich.sendMessage(from, {
         image: { url: richImageUrl },
-        caption: menuText
+        caption: headerText
     }, { quoted: fakeSystem });
-    await sleep(2000)
+
+    await sleep(1000);
+
+    // Send the categorized menu from listmenu.js
+    await rich.sendMessage(from, {
+        text: global.allxmenu(prefix, m)
+    }, { quoted: m });
+
+    await sleep(1000)
 }
 break;
 case 'dl':

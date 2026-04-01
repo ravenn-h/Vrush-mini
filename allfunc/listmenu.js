@@ -66,25 +66,27 @@ const menuData = {
   'fun': ['tictactoe']
 }
 
-global.allxmenu = (prefix, hituet) => {
+// m is now passed as parameter — no more dependency on a global m
+global.allxmenu = (prefix, m) => {
   const categories = Object.keys(menuData).map(k => `├ ${prefix}menu ${k}`)
-return `╭──『 *MAIN MENU* 』
+  return `╭──『 *MAIN MENU* 』
 ${categories.join('\n')}
 ╰───────────❒
 
-> 𖥔 ︳ʜᴇʟʟᴏ : ${m.pushName || 'User'}
+> 𖥔 ︳ʜᴇʟʟᴏ : ${m?.pushName || 'User'}
 > 𖥔 ︳ʙᴏᴛ : ${botname}
 > 𖥔 ︳sᴛᴀᴛᴜs : active ✅
 > 𖥔 ︳ᴏᴡɴᴇʀ : ${ownername}
 > 𖥔 ︳ᴠᴇʀsɪᴏɴ : v.1
 
-_Vrush-mini | RaVenn-h | 04_`}
+_Vrush-mini | RaVenn-h | 04_`
+}
 
-global.menuall = (prefix, hituet) => {
+global.menuall = (prefix, m) => {
   const allSections = Object.keys(menuData)
     .map(key => formatMenu(key, menuData[key].map(cmd => `${prefix}${cmd}`)))
     .join('\n\n')
-return `> 𖥔 ︳ʜᴇʟʟᴏ : ${m?.pushName || 'User'}
+  return `> 𖥔 ︳ʜᴇʟʟᴏ : ${m?.pushName || 'User'}
 > 𖥔 ︳ʙᴏᴛ ɴᴀᴍᴇ : ${botname}
 > 𖥔 ︳ᴏᴡɴᴇʀ : ${ownername}
 > 𖥔 ︳ᴜsᴇʀ : @${m?.sender?.split('@')[0]}
@@ -92,42 +94,44 @@ return `> 𖥔 ︳ʜᴇʟʟᴏ : ${m?.pushName || 'User'}
 
 ${allSections}
 
-_Vrush-mini | RaVenn-h | 04_`}
+_Vrush-mini | RaVenn-h | 04_`
+}
 
-global.animemenu = (prefix) => {
-  return formatMenu('anime', menuData['anime'].map(cmd => `${prefix}${cmd}`))}
+global.animemenu   = (prefix) => formatMenu('anime',    menuData['anime'].map(cmd => `${prefix}${cmd}`))
+global.ownermenu   = (prefix) => formatMenu('owner',    menuData['owner'].map(cmd => `${prefix}${cmd}`))
+global.othermenu   = (prefix) => formatMenu('other',    menuData['other'].map(cmd => `${prefix}${cmd}`))
+global.downloadmenu= (prefix) => formatMenu('download', menuData['download'].map(cmd => `${prefix}${cmd}`))
+global.groupmenu   = (prefix) => formatMenu('group',    menuData['group'].map(cmd => `${prefix}${cmd}`))
+global.stickermenu = (prefix) => formatMenu('sticker',  menuData['sticker'].map(cmd => `${prefix}${cmd}`))
+global.ephotomenu  = (prefix) => formatMenu('ephoto',   menuData['ephoto'].map(cmd => `${prefix}${cmd}`))
+global.bugmenu     = (prefix) => formatMenu('bug',      menuData['bug'].map(cmd => `${prefix}${cmd}`))
+global.funmenu     = (prefix) => formatMenu('fun',      menuData['fun'].map(cmd => `${prefix}${cmd}`))
+global.newmenu     = (prefix) => formatMenu('new',      menuData['new'].map(cmd => `${prefix}${cmd}`))
+global.generalmenu = (prefix) => formatMenu('general',  menuData['general'].map(cmd => `${prefix}${cmd}`))
+global.gameenu     = (prefix) => formatMenu('game', [])
 
-global.ownermenu = (prefix) => {
-  return formatMenu('owner', menuData['owner'].map(cmd => `${prefix}${cmd}`))}
-
-global.othermenu = (prefix) => {
-  return formatMenu('other', menuData['other'].map(cmd => `${prefix}${cmd}`))}
-
-global.downloadmenu = (prefix) => {
-  return formatMenu('download', menuData['download'].map(cmd => `${prefix}${cmd}`))}
-
-global.groupmenu = (prefix) => {
-  return formatMenu('group', menuData['group'].map(cmd => `${prefix}${cmd}`))}
-
-global.stickermenu = (prefix) => {
-  return formatMenu('sticker', menuData['sticker'].map(cmd => `${prefix}${cmd}`))}
-
-global.ephotomenu = (prefix) => {
-  return formatMenu('ephoto', menuData['ephoto'].map(cmd => `${prefix}${cmd}`))}
-
-global.bugmenu = (prefix) => {
-  return formatMenu('bug', menuData['bug'].map(cmd => `${prefix}${cmd}`))}
-
-global.funmenu = (prefix) => {
-  return formatMenu('fun', menuData['fun'].map(cmd => `${prefix}${cmd}`))}
-
-global.gameenu = (prefix) => {
-  return formatMenu('game', [])}
+// Map category name → global function
+global.menuCategoryMap = (prefix, cat) => {
+  const map = {
+    general:  global.generalmenu(prefix),
+    group:    global.groupmenu(prefix),
+    download: global.downloadmenu(prefix),
+    anime:    global.animemenu(prefix),
+    sticker:  global.stickermenu(prefix),
+    ephoto:   global.ephotomenu(prefix),
+    new:      global.newmenu(prefix),
+    owner:    global.ownermenu(prefix),
+    other:    global.othermenu(prefix),
+    bug:      global.bugmenu(prefix),
+    fun:      global.funmenu(prefix),
+  }
+  return map[cat] || null
+}
 
 let file = require.resolve(__filename)
 fs.watchFile(file, () => {
-        fs.unwatchFile(file)
-        console.log(chalk.redBright(`Update ${__filename}`))
-        delete require.cache[file]
-        require(file)
+  fs.unwatchFile(file)
+  console.log(chalk.redBright(`Update ${__filename}`))
+  delete require.cache[file]
+  require(file)
 })
