@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Vrush-mini — Pairing</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    :root {
+      --primary: #7c2d9e;
+      --primary-dark: #5b1a80;
+      --secondary: #b07dd6;
+      --danger: #ef4444;
+      --dark: #1e062a;
+      --darker: #130118;
+      --light: #f8fafc;
+      --gray: #a367b8;
+      --gray-light: #d8a8ec;
+      --card-bg: rgba(43, 13, 61, 0.7);
+      --card-border: #6b2185;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--darker);
+      color: var(--light);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    /* ── Animated background ── */
+    .bg-canvas {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(80px);
+      opacity: 0.35;
+      animation: drift linear infinite;
+    }
+    .orb1 { width: 500px; height: 500px; background: #7c2d9e; top: -150px; left: -150px; animation-duration: 18s; }
+    .orb2 { width: 350px; height: 350px; background: #7c3aed; bottom: -100px; right: -80px; animation-duration: 22s; animation-direction: reverse; }
+    .orb3 { width: 250px; height: 250px; background: #b07dd6; top: 40%; left: 60%; animation-duration: 15s; animation-delay: -5s; }
+    @keyframes drift {
+      0%   { transform: translate(0, 0) scale(1); }
+      33%  { transform: translate(40px, -30px) scale(1.08); }
+      66%  { transform: translate(-20px, 20px) scale(0.95); }
+      100% { transform: translate(0, 0) scale(1); }
+    }
+
+    /* ── Header ── */
+    header {
+      position: relative;
+      z-index: 10;
+      padding: 1.2rem 2rem;
+      background: rgba(30, 6, 42, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(107, 33, 133, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: fadeDown 0.6s ease both;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      font-size: 1.6rem;
+      font-weight: 800;
+      background: linear-gradient(135deg, #b07dd6, #7c2d9e, #5b1a80);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .logo i { -webkit-text-fill-color: #b07dd6; }
+    .status-dot {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.78rem;
+      color: var(--gray-light);
+      position: absolute;
+      right: 2rem;
+    }
+    .pulse-dot {
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.5);
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0%   { box-shadow: 0 0 0 0 rgba(74,222,128,0.5); }
+      70%  { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+      100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+    }
+
+    /* ── Main layout ── */
+    .container {
+      position: relative;
+      z-index: 10;
+      padding: 2rem;
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* ── Card ── */
+    .card {
+      width: 100%;
+      max-width: 480px;
+      background: var(--card-bg);
+      backdrop-filter: blur(20px);
+      border-radius: 20px;
+      padding: 2.2rem;
+      border: 1px solid rgba(107, 33, 133, 0.6);
+      box-shadow: 0 0 40px rgba(124, 45, 158, 0.12), 0 20px 60px rgba(0,0,0,0.3);
+      animation: fadeUp 0.7s cubic-bezier(0.16,1,0.3,1) both;
+    }
+    .card-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1.2rem;
+      border-bottom: 1px solid rgba(107,33,133,0.4);
+    }
+    .card-title {
+      font-size: 1.4rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.6rem;
+    }
+    .card-title i { color: var(--secondary); }
+    .card-sub {
+      margin-top: 0.4rem;
+      font-size: 0.83rem;
+      color: var(--gray);
+    }
+
+    /* ── Form elements ── */
+    .form-group { margin-bottom: 1.4rem; }
+    .form-label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-bottom: 0.5rem;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--gray-light);
+    }
+    .form-label i { color: var(--primary); }
+
+    .input-wrap { position: relative; }
+    .form-input {
+      width: 100%;
+      padding: 0.9rem 1rem 0.9rem 2.8rem;
+      border-radius: 10px;
+      border: 1.5px solid rgba(107,33,133,0.5);
+      background: rgba(19, 1, 24, 0.6);
+      color: var(--light);
+      font-family: 'Inter', sans-serif;
+      font-size: 1rem;
+      transition: all 0.3s;
+    }
+    .input-icon {
+      position: absolute;
+      left: 0.9rem;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--gray);
+      transition: color 0.3s;
+      pointer-events: none;
+    }
+    .form-input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(192,38,211,0.2), 0 0 20px rgba(192,38,211,0.1); }
+    .form-input:focus ~ .input-icon, .input-wrap:focus-within .input-icon { color: var(--primary); }
+    .form-input::placeholder { color: var(--gray); }
+
+    /* ── Button ── */
+    .form-btn {
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, #7c2d9e, #5b1a80);
+      color: white;
+      border: none;
+      padding: 0.95rem 1.5rem;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      transition: all 0.3s;
+      box-shadow: 0 4px 20px rgba(192,38,211,0.35);
+    }
+    .form-btn::after {
+      content: '';
+      position: absolute;
+      top: -50%; left: -60%;
+      width: 40%; height: 200%;
+      background: rgba(255,255,255,0.15);
+      transform: skewX(-20deg);
+      transition: left 0.5s;
+    }
+    .form-btn:hover { transform: translateY(-2px); box-shadow: 0 8px 30px rgba(192,38,211,0.5); }
+    .form-btn:hover::after { left: 120%; }
+    .form-btn:active { transform: translateY(0); }
+
+    /* ── Result box ── */
+    .result-box {
+      margin-top: 1.5rem;
+      padding: 1.4rem;
+      background: rgba(19,1,24,0.6);
+      border-radius: 12px;
+      min-height: 90px;
+      font-family: monospace;
+      font-size: 0.9rem;
+      border: 1px solid rgba(107,33,133,0.4);
+      white-space: pre-wrap;
+      word-break: break-word;
+      transition: all 0.3s;
+    }
+    .placeholder-text { color: var(--gray); font-style: italic; }
+
+    .success { color: #a7f3d0; }
+    .error-msg { color: #fca5a5; display: flex; align-items: center; gap: 0.5rem; }
+
+    /* ── Pair code display ── */
+    .code-display {
+      text-align: center;
+      animation: fadeUp 0.5s ease both;
+    }
+    .code-display .code-label {
+      font-size: 0.85rem;
+      color: var(--gray-light);
+      margin-bottom: 0.8rem;
+    }
+    .code-value {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 6px;
+      background: linear-gradient(135deg, #b07dd6, #7c2d9e);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      padding: 0.5rem 0;
+      animation: glow-text 2s ease-in-out infinite alternate;
+    }
+    @keyframes glow-text {
+      from { filter: drop-shadow(0 0 4px rgba(192,38,211,0.4)); }
+      to   { filter: drop-shadow(0 0 14px rgba(232,121,249,0.8)); }
+    }
+    .copy-hint { font-size: 0.78rem; color: var(--gray); margin-top: 0.5rem; cursor: pointer; }
+    .copy-hint:hover { color: var(--secondary); }
+
+    /* ── Loading dots ── */
+    .loading-dots { display: flex; align-items: center; gap: 0.5rem; color: var(--gray-light); }
+    .loading-dots span {
+      display: inline-block;
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--primary);
+      animation: bounce-dot 1.2s infinite ease-in-out;
+    }
+    .loading-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .loading-dots span:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes bounce-dot {
+      0%, 80%, 100% { transform: scale(0.7); opacity: 0.4; }
+      40% { transform: scale(1.2); opacity: 1; }
+    }
+
+    /* ── FAB ── */
+    .dashboard-btn {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      width: 56px; height: 56px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #7c2d9e, #7c3aed);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.3rem;
+      box-shadow: 0 4px 20px rgba(192,38,211,0.4);
+      cursor: pointer;
+      border: none;
+      z-index: 100;
+      transition: all 0.3s;
+    }
+    .dashboard-btn::before {
+      content: '';
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      border: 2px solid rgba(192,38,211,0.4);
+      animation: ring-pulse 2s infinite;
+    }
+    .dashboard-btn:hover { transform: scale(1.1); box-shadow: 0 8px 30px rgba(192,38,211,0.6); }
+    @keyframes ring-pulse {
+      0%   { transform: scale(1); opacity: 0.8; }
+      100% { transform: scale(1.6); opacity: 0; }
+    }
+
+    /* ── Footer ── */
+    .footer {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 1.2rem;
+      font-size: 0.82rem;
+      color: var(--gray);
+      background: rgba(30,6,42,0.8);
+      backdrop-filter: blur(10px);
+      border-top: 1px solid rgba(107,33,133,0.3);
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeUp   { from { opacity:0; transform:translateY(24px); } to { opacity:1; transform:translateY(0); } }
+    @keyframes fadeDown { from { opacity:0; transform:translateY(-16px); } to { opacity:1; transform:translateY(0); } }
+
+    @media (max-width: 768px) {
+      .container { padding: 1rem; }
+      .card { padding: 1.5rem; border-radius: 16px; }
+      .status-dot { display: none; }
+      .code-value { font-size: 1.7rem; letter-spacing: 4px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="bg-canvas">
+    <div class="orb orb1"></div>
+    <div class="orb orb2"></div>
+    <div class="orb orb3"></div>
+  </div>
+
+  <header>
+    <div class="logo">
+      <i class="fas fa-bolt"></i>
+      Vrush-mini
+    </div>
+    <div class="status-dot">
+      <div class="pulse-dot"></div>
+      Online
+    </div>
+  </header>
+
+  <div class="container">
+    <div class="card">
+      <div class="card-header">
+        <h2 class="card-title">
+          <i class="fas fa-mobile-alt"></i>
+          WhatsApp Pairing
+        </h2>
+        <p class="card-sub">Enter your number to get a pairing code</p>
+      </div>
+
+      <div class="form-group">
+        <label class="form-label">
+          <i class="fas fa-phone"></i> Phone Number
+        </label>
+        <div class="input-wrap">
+          <i class="input-icon fas fa-globe"></i>
+          <input class="form-input" type="text" id="number" placeholder="e.g. 2250101676111" />
+        </div>
+      </div>
+
+      <div class="form-group">
+        <button class="form-btn" onclick="startPair()">
+          <i class="fas fa-key"></i>
+          Generate Pairing Code
+        </button>
+      </div>
+
+      <div id="output" class="result-box">
+        <span class="placeholder-text">Your code will appear here...</span>
+      </div>
+    </div>
+  </div>
+
+  <button class="dashboard-btn" onclick="window.location.href='/dashboard'" title="Dashboard">
+    <i class="fas fa-th-large"></i>
+  </button>
+
+  <div class="footer">
+    ⚡ <strong style="color:var(--secondary)">Vrush-mini</strong> &nbsp;·&nbsp; by RaVenn-h &amp; 04 &copy; 2025
+  </div>
+
+  <script>
+    function startPair() {
+      const num = document.getElementById('number').value.trim();
+      const output = document.getElementById('output');
+
+      if (!num || !/^\d{8,15}$/.test(num)) {
+        output.innerHTML = `<div class="error-msg"><i class="fas fa-exclamation-circle"></i> Please enter a valid number (8–15 digits).</div>`;
+        return;
+      }
+
+      output.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span>&nbsp; Starting pairing...</div>`;
+
+      fetch(`/pair?number=${num}`)
+        .then(() => {
+          output.innerHTML = `<div class="loading-dots"><span></span><span></span><span></span>&nbsp; Waiting for code...</div>`;
+          pollCode(num);
+        })
+        .catch(() => {
+          output.innerHTML = `<div class="error-msg"><i class="fas fa-times-circle"></i> Failed to start pairing. Try again.</div>`;
+        });
+    }
+
+    function pollCode(num) {
+      const output = document.getElementById('output');
+      let attempts = 0;
+      const poll = setInterval(() => {
+        attempts++;
+        if (attempts > 20) {
+          clearInterval(poll);
+          output.innerHTML = `<div class="error-msg"><i class="fas fa-clock"></i> Timeout. Please try again.</div>`;
+          return;
+        }
+        fetch("/pairing-code")
+          .then(r => r.json())
+          .then(data => {
+            if (data.code) {
+              clearInterval(poll);
+              output.innerHTML = `
+                <div class="code-display">
+                  <div class="code-label"><i class="fas fa-check-circle" style="color:#4ade80"></i> Code for ${data.number || num}</div>
+                  <div class="code-value">${data.code}</div>
+                  <div class="copy-hint" onclick="copyCode('${data.code}')"><i class="fas fa-copy"></i> tap to copy</div>
+                </div>`;
+            }
+          });
+      }, 2000);
+    }
+
+    function copyCode(code) {
+      navigator.clipboard.writeText(code.replace(/-/g,''));
+      const hint = document.querySelector('.copy-hint');
+      if (hint) { hint.innerHTML = '<i class="fas fa-check"></i> Copied!'; hint.style.color = '#4ade80'; }
+    }
+
+    document.getElementById('number').addEventListener('keypress', e => { if (e.key === 'Enter') startPair(); });
+  </script>
+</body>
+</html>

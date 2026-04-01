@@ -1,0 +1,19 @@
+{
+  "users": [
+    {
+      "username": "Admin",
+      "password": "admin",
+      "pairings": [
+        "22789915298"
+      ]
+    },
+    {
+      "username": "admin1",
+      "password": "admin1",
+      "pairings": [
+        "22789915298",
+        "2250104610403"
+      ]
+    }
+  ]
+}
