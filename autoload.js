@@ -110,10 +110,22 @@ module.exports = {
       }
 
       const files = await fs.readdir(pairingDir, { withFileTypes: true });
-      const pairUsers = files
-        .filter(dirent => dirent.isDirectory())
-        .map(dirent => dirent.name)
-        .filter(name => /^\d+$/.test(name))
+      const pairUsers = (await Promise.all(
+        files
+          .filter(dirent => dirent.isDirectory())
+          .map(dirent => dirent.name)
+          .filter(name => /^\d+$/.test(name))
+          .map(async (name) => {
+            const credsPath = path.join(pairingDir, name, 'creds.json');
+            try {
+              await fs.access(credsPath);
+              return name; // creds.json exists → valid session
+            } catch {
+              console.log(chalk.yellow(`⚠️ Skipping ${name}: no creds.json found (incomplete session)`));
+              return null;
+            }
+          })
+      )).filter(Boolean);
 
       if (pairUsers.length === 0) {
         console.log(chalk.yellow('ℹ️ No paired users found.'));

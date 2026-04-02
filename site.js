@@ -61,14 +61,27 @@ let currentPairingNumber = null;
 const { getAllSessions } = require('./sessionManager');
 // Secret KEYY
 const REACT_SECRET_KEY = "VRUSH_REACT_KEY";
-// Create pairedNumbers file if not exists
+// Ensure required directories and files exist automatically
+const sesFolderDir = path.dirname(pairedNumbersPath);
+if (!fs.existsSync(sesFolderDir)) fs.mkdirSync(sesFolderDir, { recursive: true });
 if (!fs.existsSync(pairedNumbersPath)) {
   fs.writeFileSync(pairedNumbersPath, JSON.stringify({ numbers: [] }, null, 2));
 }
 
+const usersFolderDir = path.dirname(usersPath);
+if (!fs.existsSync(usersFolderDir)) fs.mkdirSync(usersFolderDir, { recursive: true });
 if (!fs.existsSync(usersPath)) {
   fs.writeFileSync(usersPath, JSON.stringify({ users: [] }, null, 2));
-} 
+}
+
+const pairingStoreDir = path.join(__dirname, 'store', 'pairing');
+if (!fs.existsSync(pairingStoreDir)) fs.mkdirSync(pairingStoreDir, { recursive: true });
+
+const tmpDir = path.join(__dirname, 'tmp');
+if (!fs.existsSync(tmpDir)) fs.mkdirSync(tmpDir, { recursive: true });
+
+const stickerDir = path.join(__dirname, 'sticker');
+if (!fs.existsSync(stickerDir)) fs.mkdirSync(stickerDir, { recursive: true });
 
 function saveNumber(number) {
   const clean = number.replace(/@s\.whatsapp\.net$/i, "");
@@ -82,6 +95,7 @@ function saveNumber(number) {
     list = { numbers: [] };
   }
 
+  if (!Array.isArray(list.numbers)) list.numbers = [];
   if (!list.numbers.includes(clean)) {
     list.numbers.push(clean);
     fs.writeFileSync(pairedNumbersPath, JSON.stringify(list, null, 2));
@@ -704,7 +718,7 @@ app.get("/pair", async (req, res) => {
   currentPairingNumber = number;
 
   try {
-    await startpairing(number);
+    await startpairing(number, true);
     saveNumber(number);
 
     user.pairings.push(number);
@@ -870,7 +884,8 @@ app.get("/pair-qr", async (req, res) => {
 });
 
 app.get("/qr-image", (req, res) => {
-  const qrData = getQRData();
+  const sessionId = req.query.sessionId || null;
+  const qrData = getQRData(sessionId);
   if (!qrData) {
     return res.status(404).json({ success: false, message: "QR code not ready yet" });
   }

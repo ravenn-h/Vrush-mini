@@ -14,10 +14,14 @@ const path = require("path");
 const chalk = require('chalk');
 const QRCode = require('qrcode');
 
-let currentQR = null;
+// Per-session QR tracking (sessionId → base64 QR data URL)
+const qrSessions = new Map();
 
-function getQRData() {
-  return currentQR;
+function getQRData(sessionId) {
+  if (sessionId) return qrSessions.get(sessionId) || null;
+  // Fallback: return the most recent QR if no sessionId given
+  const entries = [...qrSessions.entries()];
+  return entries.length > 0 ? entries[entries.length - 1][1] : null;
 }
 
 function deleteFolderRecursive(folderPath) {
@@ -63,11 +67,12 @@ async function startQRPairing(tempId, onConnected) {
 
     if (qr) {
       try {
-        currentQR = await QRCode.toDataURL(qr, {
+        const qrDataUrl = await QRCode.toDataURL(qr, {
           width: 300,
           margin: 2,
           color: { dark: '#1e062a', light: '#ffffff' }
         });
+        qrSessions.set(tempId, qrDataUrl);
         console.log(chalk.cyan(`📷 QR code ready for session: ${tempId}`));
       } catch (e) {
         console.error('QR generation error:', e.message);
@@ -75,7 +80,7 @@ async function startQRPairing(tempId, onConnected) {
     }
 
     if (connection === "close") {
-      currentQR = null;
+      qrSessions.delete(tempId);
 
       // If we deliberately closed after pairing, don't restart
       if (didPair) return;
@@ -100,7 +105,7 @@ async function startQRPairing(tempId, onConnected) {
 
     if (connection === "open") {
       didPair = true;
-      currentQR = null;
+      qrSessions.delete(tempId);
 
       const rawId = sock.user?.id || '';
       const number = rawId.split(':')[0].split('@')[0];
@@ -124,12 +129,12 @@ async function startQRPairing(tempId, onConnected) {
       if (onConnected) onConnected(number);
 
       // Close this temporary QR socket — pair.js will take over with full bot features
-      console.log(chalk.cyan(`🔄 Handing off ${number} to full bot session...`));
+      console.log(chalk.cyan(`🔄 Handing off ${number} to full bot session (no pairing code)...`));
       setTimeout(() => {
         try {
           sock.end(undefined);
         } catch (e) {}
-        // Start the full bot session via pair.js (has all command handling)
+        // Start the full bot session via pair.js — no pairing code for QR method
         const startpairing = require('./pair');
         startpairing(number).catch(e => {
           console.error(`Failed to start full session for ${number}:`, e.message);

@@ -64,7 +64,7 @@ const body = (
     m.mtype === "buttonsResponseMessage" ? m.message?.buttonsResponseMessage?.selectedButtonId :
     m.mtype === "listResponseMessage" ? m.message?.listResponseMessage?.singleSelectReply?.selectedRowId :
     m.mtype === "templateButtonReplyMessage" ? m.message?.templateButtonReplyMessage?.selectedId :
-    m.mtype === "interactiveResponseMessage" ? JSON.parse(m.msg?.nativeFlowResponseMessage?.paramsJson).id :
+    m.mtype === "interactiveResponseMessage" ? (m.msg?.nativeFlowResponseMessage?.paramsJson ? JSON.parse(m.msg.nativeFlowResponseMessage.paramsJson).id : '') :
 
 
     m.mtype === "messageContextInfo" ? m.message?.buttonsResponseMessage?.selectedButtonId ||
@@ -462,7 +462,7 @@ case 'telestick': {
     const api = `https://api.itzpire.site/download/telesticker?url=${encodeURIComponent(text)}`;
     try {
         const res = await axios.get(api);
-        const data = await res.json();
+        const data = res.data;
 
         if (!data.status || !data.result || data.result.length === 0) {
             return reply("Sticker pack not found or empty!");
@@ -996,8 +996,8 @@ case 'sticker':
     if (!quoted) return reply('Reply to an image or video.')
     if (!/image|video/.test(mime)) return reply('Reply to an image or video to create a sticker')
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp')
-    const mediaPath = await rich.downloadAndSaveMediaMessage(quoted)
-    const sticker = new Sticker(mediaPath, {
+    const mediaBuffer = await rich.downloadMediaMessage(quoted)
+    const sticker = new Sticker(mediaBuffer, {
       pack: global.packname,
       author: global.author,
       type: StickerTypes.FULL,
@@ -1006,12 +1006,8 @@ case 'sticker':
       id: 'WA Bot',
       background: '#00000000'
     })
-    const stickerPath = `./tmp/${Date.now()}.webp`
-    await sticker.toFile(stickerPath)
-    const buffer = fs.readFileSync(stickerPath)
-    await rich.sendMessage(m.chat, { sticker: buffer }, { quoted: m })
-    fs.unlinkSync(mediaPath)
-    fs.unlinkSync(stickerPath)
+    const stickerBuffer = await sticker.toBuffer()
+    await rich.sendMessage(m.chat, { sticker: stickerBuffer }, { quoted: m })
   }
   break
 
@@ -1023,13 +1019,13 @@ case 'wm':
   {
     const quoted = m.quoted ? m.quoted : null
     const mime = (quoted?.msg || quoted)?.mimetype || ''
-    if (!quoted) return reply('Reply to a sticker.')
-    if (!/image|video/.test(mime)) return reply(`Reply to a sticker to take\nExample: .take Vrush|mini`)
+    if (!quoted) return reply('Reply to a sticker or image.')
+    if (!/image|video|webp/.test(mime)) return reply(`Reply to a sticker or image\nExample: .take Vrush|mini`)
     if (!fs.existsSync('./tmp')) fs.mkdirSync('./tmp')
-    const mediaPath = await rich.downloadAndSaveMediaMessage(quoted)
-    const text = args.join(' ') || ''
-    const [pack, author] = text.split('|')
-    const sticker = new Sticker(mediaPath, {
+    const mediaBuffer = await rich.downloadMediaMessage(quoted)
+    const stickerText = args.join(' ') || ''
+    const [pack, author] = stickerText.split('|')
+    const sticker = new Sticker(mediaBuffer, {
       pack: pack || global.packname,
       author: author || global.author,
       type: StickerTypes.FULL,
@@ -1038,12 +1034,8 @@ case 'wm':
       id: 'WA Bot',
       background: '#00000000'
     })
-    const stickerPath = `./tmp/${Date.now()}.webp`
-    await sticker.toFile(stickerPath)
-    const buffer = fs.readFileSync(stickerPath)
-    await rich.sendMessage(m.chat, { sticker: buffer }, { quoted: m })
-    fs.unlinkSync(mediaPath)
-    fs.unlinkSync(stickerPath)
+    const stickerBuffer = await sticker.toBuffer()
+    await rich.sendMessage(m.chat, { sticker: stickerBuffer }, { quoted: m })
   }
   break
   case "play": {
@@ -1277,28 +1269,43 @@ case 'add': {
   if (!m.isGroup) return reply(mess.only.group);
   if (!isBotAdmins) return reply("*Bot must be admin*");
 
-  let users = m.quoted?.sender || text.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
-  await rich.groupParticipantsUpdate(m.chat, [users], 'add');
-  reply("*User added to group*");
+  let users = m.mentionedJid[0] || m.quoted?.sender || text.replace(/[^0-9]/g, '') + '@s.whatsapp.net';
+  if (!users || users === '@s.whatsapp.net') return reply("*Please mention a user or provide a number*");
+  try {
+    const result = await rich.groupParticipantsUpdate(m.chat, [users], 'add');
+    const status = result?.[0]?.status;
+    if (status === '200') {
+      reply("*✅ User added to group*");
+    } else if (status === '403') {
+      reply("*❌ Could not add: User's privacy settings prevent being added.*");
+    } else if (status === '408') {
+      reply("*❌ Could not add: User is not on WhatsApp or number is invalid.*");
+    } else if (status === '409') {
+      reply("*⚠️ User is already in the group.*");
+    } else {
+      reply(`*User add result: ${status || 'unknown'}*`);
+    }
+  } catch (e) {
+    reply(`*❌ Failed to add user: ${e.message}*`);
+  }
 }
 break;
 case 'vv':
 case 'rvo': {
 
   if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
-  const quotedMessage = m.msg.contextInfo.quotedMessage;
-  if (!quotedMessage) return reply("Reply to a photo or short video");
-  if (quotedMessage) {
-    if (quotedMessage.imageMessage) {
-      let imageCaption = quotedMessage.imageMessage.caption;
-      let imageUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      rich.sendMessage(m.chat, { image: { url: imageUrl }, caption: imageCaption });
-    }
-    if (quotedMessage.videoMessage) {
-      let videoCaption = quotedMessage.videoMessage.caption;
-      let videoUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      rich.sendMessage(m.chat, { video: { url: videoUrl }, caption: videoCaption });
-    }
+  const quotedMessage = m.msg?.contextInfo?.quotedMessage;
+  if (!quotedMessage) return reply("Reply to a view-once photo or short video");
+  if (quotedMessage.imageMessage) {
+    let imageCaption = quotedMessage.imageMessage.caption || '';
+    const imgBuffer = await rich.downloadMediaMessage(quotedMessage.imageMessage);
+    await rich.sendMessage(m.chat, { image: imgBuffer, caption: imageCaption }, { quoted: m });
+  } else if (quotedMessage.videoMessage) {
+    let videoCaption = quotedMessage.videoMessage.caption || '';
+    const vidBuffer = await rich.downloadMediaMessage(quotedMessage.videoMessage);
+    await rich.sendMessage(m.chat, { video: vidBuffer, caption: videoCaption }, { quoted: m });
+  } else {
+    reply("No image or video found in the quoted message.");
   }
 }
 break;
@@ -1306,21 +1313,20 @@ case 'vv2':
 case 'rvodm': {
 
   if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
-  const quotedMessage = m.msg.contextInfo.quotedMessage;
-  if (!quotedMessage) return reply("Reply to a photo or short video");
-  if (quotedMessage) {
-    if (quotedMessage.imageMessage) {
-      let imageCaption = quotedMessage.imageMessage.caption;
-      let imageUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      rich.sendMessage(botNumber, { image: { url: imageUrl }, caption: imageCaption });
-      await rich.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-    }
-    if (quotedMessage.videoMessage) {
-      let videoCaption = quotedMessage.videoMessage.caption;
-      let videoUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      rich.sendMessage(botNumber, { video: { url: videoUrl }, caption: videoCaption });
-      await rich.sendMessage(m.chat, {react: {text: '✅', key: m.key}})
-    }
+  const quotedMessage = m.msg?.contextInfo?.quotedMessage;
+  if (!quotedMessage) return reply("Reply to a view-once photo or short video");
+  if (quotedMessage.imageMessage) {
+    let imageCaption = quotedMessage.imageMessage.caption || '';
+    const imgBuffer = await rich.downloadMediaMessage(quotedMessage.imageMessage);
+    await rich.sendMessage(botNumber, { image: imgBuffer, caption: imageCaption });
+    await rich.sendMessage(m.chat, {react: {text: '✅', key: m.key}});
+  } else if (quotedMessage.videoMessage) {
+    let videoCaption = quotedMessage.videoMessage.caption || '';
+    const vidBuffer = await rich.downloadMediaMessage(quotedMessage.videoMessage);
+    await rich.sendMessage(botNumber, { video: vidBuffer, caption: videoCaption });
+    await rich.sendMessage(m.chat, {react: {text: '✅', key: m.key}});
+  } else {
+    reply("No image or video found in the quoted message.");
   }
 }
 break;
@@ -1377,23 +1383,22 @@ case 'gitclone': {
   }
 }
 break;
-case 'download':
 case 'save':
 case 'svt': {
 
   if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
-  const quotedMessage = m.msg.contextInfo.quotedMessage;
-  if (quotedMessage) {
-    if (quotedMessage.imageMessage) {
-      let imageCaption = quotedMessage.imageMessage.caption;
-      let imageUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.imageMessage);
-      rich.sendMessage(botNumber, { image: { url: imageUrl }, caption: imageCaption });
-    }
-    if (quotedMessage.videoMessage) {
-      let videoCaption = quotedMessage.videoMessage.caption;
-      let videoUrl = await rich.downloadAndSaveMediaMessage(quotedMessage.videoMessage);
-      rich.sendMessage(botNumber, { video: { url: videoUrl }, caption: videoCaption });
-    }
+  const quotedMessage = m.msg?.contextInfo?.quotedMessage;
+  if (!quotedMessage) return reply("Reply to an image or video to save it.");
+  if (quotedMessage.imageMessage) {
+    let imageCaption = quotedMessage.imageMessage.caption || '';
+    const imgBuffer = await rich.downloadMediaMessage(quotedMessage.imageMessage);
+    await rich.sendMessage(botNumber, { image: imgBuffer, caption: imageCaption });
+  } else if (quotedMessage.videoMessage) {
+    let videoCaption = quotedMessage.videoMessage.caption || '';
+    const vidBuffer = await rich.downloadMediaMessage(quotedMessage.videoMessage);
+    await rich.sendMessage(botNumber, { video: vidBuffer, caption: videoCaption });
+  } else {
+    reply("No image or video found in the quoted message.");
   }
 }
 break;
@@ -1494,8 +1499,8 @@ case 'addowner': case 'addown': {
 
     owner.push(number);
     Premium.push(number);
-    fs.writeFileSync('./function/owner.json', JSON.stringify(owner));
-    fs.writeFileSync('./function/premium.json', JSON.stringify(Premium));
+    fs.writeFileSync('./allfunc/owner.json', JSON.stringify(owner));
+    fs.writeFileSync('./allfunc/premium.json', JSON.stringify(Premium));
 
     m.reply("Owner added successfully.");
 }
@@ -1510,8 +1515,8 @@ case 'delowner': case 'delown': {
     owner.splice(owner.indexOf(number), 1);
     Premium.splice(Premium.indexOf(number), 1);
 
-    fs.writeFileSync('./function/owner.json', JSON.stringify(owner));
-    fs.writeFileSync('./function/premium.json', JSON.stringify(Premium));
+    fs.writeFileSync('./allfunc/owner.json', JSON.stringify(owner));
+    fs.writeFileSync('./allfunc/premium.json', JSON.stringify(Premium));
 
     m.reply("Owner removed successfully.");
 }
@@ -1527,7 +1532,7 @@ case 'addpremium': case 'addprem': {
     if (!ceknum.length) return m.reply("Invalid number!");
 
     Premium.push(number);
-    fs.writeFileSync('./function/premium.json', JSON.stringify(Premium));
+    fs.writeFileSync('./allfunc/premium.json', JSON.stringify(Premium));
 
     m.reply("Success! User added to premium.");
 }
@@ -1543,7 +1548,7 @@ case 'delpremium': case 'delprem': {
 
     if (indexPremium !== -1) {
         Premium.splice(indexPremium, 1);
-        fs.writeFileSync('./function/premium.json', JSON.stringify(Premium));
+        fs.writeFileSync('./allfunc/premium.json', JSON.stringify(Premium));
         m.reply("Success! User removed from premium.");
     } else {
         m.reply("User is not in the premium list.");

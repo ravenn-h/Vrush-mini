@@ -21,8 +21,6 @@ const {
 Boom
 } = require('@hapi/boom')
 const PhoneNumber = require('awesome-phonenumber')
-let phoneNumber = "2348140825959";
-const pairingCode = !!phoneNumber || process.argv.includes("--pairing-code");
 const useMobile = process.argv.includes("--mobile");
 const readline = require("readline");
 const pino = require('pino')
@@ -96,7 +94,7 @@ fs.lstatSync(curPath).isDirectory() ? deleteFolderRecursive(curPath) : fs.unlink
 fs.rmdirSync(folderPath);
 }
 }
-async function startpairing(number) {
+async function startpairing(number, requestPairing = false) {
 const { version, isLatest } = await fetchLatestBaileysVersion();
 const sessionDir = './store/pairing/' + number;
 if (!fs.existsSync(sessionDir)) {
@@ -104,8 +102,21 @@ if (!fs.existsSync(sessionDir)) {
 }
 const {
 state,
-saveCreds
+saveCreds: _saveCreds
 } = await useMultiFileAuthState(sessionDir);
+
+// Safe wrapper: recreate directory if it was deleted before creds can be written
+const saveCreds = async () => {
+  try {
+    if (!fs.existsSync(sessionDir)) {
+      fs.mkdirSync(sessionDir, { recursive: true });
+    }
+    await _saveCreds();
+  } catch (err) {
+    // Ignore ENOENT — session was deleted (e.g. after logout)
+    if (err.code !== 'ENOENT') console.error(`saveCreds error for ${number}:`, err.message);
+  }
+};
 
 const bad = makeWASocket({
     logger: pino({ level: "silent" }),
@@ -126,7 +137,7 @@ const bad = makeWASocket({
       
 store.bind(bad.ev);
 
-if (pairingCode && !state.creds.registered) {
+if (requestPairing && !state.creds.registered) {
 if (useMobile) {
 throw new Error('Cannot use pairing code with mobile API');
 }
@@ -135,22 +146,25 @@ let phoneNumber = number.replace(/[^0-9]/g, '');
 /*if (!Object.keys(PHONENUMBER_MCC).some(v => phoneNumber.startsWith(v))) {
 process.exit(0);
 }*/
-setTimeout(async () => {
-let code = await bad.requestPairingCode(phoneNumber, 'HISOKAMD');
-code = code?.match(/.{1,4}/g)?.join("-") || code;
-fs.writeFile(
-  './store/pairing/pairing.json',  // Path of the file where it will be saved
-  JSON.stringify({"code": code}, null, 2),  // Transforms the object into a JSON formatted string
-  'utf8',
-  (err) => {
-      if (err) {
-      } else {
-      }
+const requestCodeWithRetry = async (attempts = 0) => {
+  try {
+    let code = await bad.requestPairingCode(phoneNumber, 'HISOKAMD');
+    code = code?.match(/.{1,4}/g)?.join("-") || code;
+    const pairingDir = './store/pairing';
+    if (!fs.existsSync(pairingDir)) fs.mkdirSync(pairingDir, { recursive: true });
+    fs.writeFileSync('./store/pairing/pairing.json', JSON.stringify({ code, number: phoneNumber }, null, 2));
+    console.log(`📲 Pairing code for ${phoneNumber}: ${code}`);
+  } catch (err) {
+    if (attempts < 3) {
+      console.log(`⚠️ Pairing code request failed (attempt ${attempts + 1}): ${err.message}. Retrying in 3s...`);
+      await new Promise(resolve => setTimeout(resolve, 3000));
+      await requestCodeWithRetry(attempts + 1);
+    } else {
+      console.error(`❌ Could not obtain pairing code for ${phoneNumber}: ${err.message}`);
+    }
   }
-);
-
-
-}, 1703);
+};
+setTimeout(requestCodeWithRetry, 3000);
 
 }
 bad.getLatestNewsletterMessage = async (newsletterJid) => {
@@ -533,9 +547,9 @@ if (m.isGroup) m.participant = bad.decodeJid(m.key.participant) || ''
 if (m.message) {
 m.mtype = getContentType(m.message)
 m.msg = (m.mtype == 'viewOnceMessage' ? m.message[m.mtype].message[getContentType(m.message[m.mtype].message)] : m.message[m.mtype])
-m.body = m.message.conversation || m.msg.caption || m.msg.text || (m.mtype == 'listResponseMessage') && m.msg.singleSelectReply.selectedRowId || (m.mtype == 'buttonsResponseMessage') && m.msg.selectedButtonId || (m.mtype == 'viewOnceMessage') && m.msg.caption || m.text
-let quoted = m.quoted = m.msg.contextInfo ? m.msg.contextInfo.quotedMessage : null
-m.mentionedJid = m.msg.contextInfo ? m.msg.contextInfo.mentionedJid : []
+m.body = m.message.conversation || m.msg?.caption || m.msg?.text || (m.mtype == 'listResponseMessage') && m.msg?.singleSelectReply?.selectedRowId || (m.mtype == 'buttonsResponseMessage') && m.msg?.selectedButtonId || (m.mtype == 'viewOnceMessage') && m.msg?.caption || m.text
+let quoted = m.quoted = m.msg?.contextInfo ? m.msg.contextInfo.quotedMessage : null
+m.mentionedJid = m.msg?.contextInfo ? m.msg.contextInfo.mentionedJid : []
 if (m.quoted) {
 let type = getContentType(quoted)
 m.quoted = m.quoted[type]
@@ -547,13 +561,13 @@ if (typeof m.quoted === 'string') m.quoted = {
 text: m.quoted
 }
 m.quoted.mtype = type
-m.quoted.id = m.msg.contextInfo.stanzaId
-m.quoted.chat = m.msg.contextInfo.remoteJid || m.chat
+m.quoted.id = m.msg?.contextInfo?.stanzaId
+m.quoted.chat = m.msg?.contextInfo?.remoteJid || m.chat
 m.quoted.isBaileys = m.quoted.id ? m.quoted.id.startsWith('BAE5') && m.quoted.id.length === 16 : false
-m.quoted.sender = bad.decodeJid(m.msg.contextInfo.participant)
+m.quoted.sender = bad.decodeJid(m.msg?.contextInfo?.participant)
 m.quoted.fromMe = m.quoted.sender === bad.decodeJid(bad.user.id)
 m.quoted.text = m.quoted.text || m.quoted.caption || m.quoted.conversation || m.quoted.contentText || m.quoted.selectedDisplayText || m.quoted.title || ''
-m.quoted.mentionedJid = m.msg.contextInfo ? m.msg.contextInfo.mentionedJid : []
+m.quoted.mentionedJid = m.msg?.contextInfo ? m.msg.contextInfo.mentionedJid : []
 m.getQuotedObj = m.getQuotedMessage = async () => {
 if (!m.quoted.id) return false
 let q = await store.loadMessage(m.chat, m.quoted.id, conn)
@@ -573,8 +587,8 @@ m.quoted.copyNForward = (jid, forceForward = false, options = {}) => bad.copyNFo
 m.quoted.download = () => bad.downloadMediaMessage(m.quoted)
 }
 }
-if (m.msg.url) m.download = () => bad.downloadMediaMessage(m.msg)
-m.text = m.msg.text || m.msg.caption || m.message.conversation || m.msg.contentText || m.msg.selectedDisplayText || m.msg.title || ''
+if (m.msg?.url) m.download = () => bad.downloadMediaMessage(m.msg)
+m.text = m.msg?.text || m.msg?.caption || m.message.conversation || m.msg?.contentText || m.msg?.selectedDisplayText || m.msg?.title || ''
 m.reply = (text, chatId = m.chat, options = {}) => Buffer.isBuffer(text) ? bad.sendMedia(chatId, text, 'file', '', m, { ...options }) : bad.sendText(chatId, text, m, { ...options })
 m.copy = () => exports.smsg(conn, M.fromObject(M.toObject(m)))
 m.copyNForward = (jid = m.chat, forceForward = false, options = {}) => bad.copyNForward(jid, m, forceForward, options)

@@ -444,11 +444,13 @@
           let attempts = 0;
           let connected = false;
 
+          const qrSessionId = data.sessionId;
+
           qrPollInterval = setInterval(() => {
             if (connected) return;
             attempts++;
 
-            fetch('/qr-image')
+            fetch('/qr-image?sessionId=' + qrSessionId)
               .then(r => r.json())
               .then(d => {
                 if (d.success && d.qr) {
@@ -467,7 +469,7 @@
 
             // Check if connected (QR disappears after scan)
             if (attempts > 3) {
-              checkQRConnected(data.sessionId);
+              checkQRConnected(qrSessionId);
             }
 
             if (attempts > 60) {
@@ -490,8 +492,8 @@
 
     let lastQRState = 'waiting';
 
-    function checkQRConnected() {
-      fetch('/qr-image')
+    function checkQRConnected(sessionId) {
+      fetch('/qr-image?sessionId=' + (sessionId || ''))
         .then(r => r.json())
         .then(d => {
           if (!d.success) {
