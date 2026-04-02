@@ -1,2 +1,0 @@
-# Vrush-mini
-Lom
