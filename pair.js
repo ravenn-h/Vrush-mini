@@ -37,36 +37,39 @@ const rl = readline.createInterface({input: process.stdin,output: process.stdout
 let store = makeInMemoryStore({logger: pino().child({level: 'silent',stream: 'store'})});
 let msgRetryCounterCache;
 const retryMap440 = {};
+const joinedGroups = new Set(); // track groups already joined to avoid repeated bad-request
 const idch = [
-  "120363402888937015@newsletter",
-  "120363401816875075@newsletter"
+  "120363424777091584@newsletter",
+  "120363313242950119@newsletter",
+  "120363408412714304@newsletter"
 ];
 const { addSession, removeSession, updateSessionStatus } = require('./sessionManager');
 let retryCount440 = 0;
 const MAX_RETRIES_440 = 3;
 async function autoJoinGroup(rich, inviteLink) {
+  if (joinedGroups.has(inviteLink)) return; // already joined, skip silently
   try {
     const inviteCode = inviteLink.match(/([a-zA-Z0-9_-]{22})/)?.[1];
-    
-    if (!inviteCode) {
-      throw new Error('Invalid invite link');
-    }
-    
+    if (!inviteCode) throw new Error('Invalid invite link');
     const result = await rich.groupAcceptInvite(inviteCode);
+    joinedGroups.add(inviteLink);
     console.log('✅ Joined group:', result);
     return result;
-    
   } catch (error) {
-    console.error('❌ Failed to join group:', error.message);
+    // Suppress "already a member" / "bad-request" noise
+    if (['bad-request', 'already-exists', 'not-authorized'].includes(error.message)) {
+      joinedGroups.add(inviteLink); // don't retry next time
+    } else {
+      console.error('❌ Failed to join group:', error.message);
+    }
     return null;
   }
 }
 const getLatestNewsletterMessage = async (gabi, newsletterJid) => {
   try {
-    const history = await gabi.chatRead(newsletterJid);
-    const msgs = await gabi.loadMessages(newsletterJid, 5); // fetch last 5
-
-    const last = msgs.reverse().find(m => m?.message);
+    const result = await gabi.newsletterFetchMessages('jid', newsletterJid, 5);
+    const msgs = result?.messages || result || [];
+    const last = Array.isArray(msgs) ? msgs[msgs.length - 1] : null;
     return last;
   } catch (e) {
     console.log('❌ Error fetching newsletter message:', e.message);
@@ -78,13 +81,10 @@ const reactToNewsletter = async (gabi, channelJid, emoji = '👑') => {
   const msg = await getLatestNewsletterMessage(gabi, channelJid);
   if (!msg) return console.log('⚠️ No recent newsletter message found.');
 
-  await gabi.sendMessage(channelJid, {
-    react: {
-      text: emoji,
-      key: msg.key,
-    }
-  });
+  const serverId = msg.server_id || msg.serverId || msg.key?.id;
+  if (!serverId) return console.log('⚠️ No server_id found for newsletter message.');
 
+  await gabi.newsletterReactMessage(channelJid, serverId, emoji);
   console.log(`✅ Reacted to ${channelJid}'s post with "${emoji}"`);
 };
 function deleteFolderRecursive(folderPath) {
@@ -98,10 +98,14 @@ fs.rmdirSync(folderPath);
 }
 async function startpairing(number) {
 const { version, isLatest } = await fetchLatestBaileysVersion();
+const sessionDir = './store/pairing/' + number;
+if (!fs.existsSync(sessionDir)) {
+  fs.mkdirSync(sessionDir, { recursive: true });
+}
 const {
 state,
 saveCreds
-} = await useMultiFileAuthState('./store/pairing/' + number);
+} = await useMultiFileAuthState(sessionDir);
 
 const bad = makeWASocket({
     logger: pino({ level: "silent" }),
@@ -151,10 +155,9 @@ fs.writeFile(
 }
 bad.getLatestNewsletterMessage = async (newsletterJid) => {
   try {
-    const history = await bad.chatRead(newsletterJid);
-    const msgs = await bad.loadMessages(newsletterJid, 5); // fetch last 5
-
-    const last = msgs.reverse().find(m => m?.message);
+    const result = await bad.newsletterFetchMessages('jid', newsletterJid, 5);
+    const msgs = result?.messages || result || [];
+    const last = Array.isArray(msgs) ? msgs[msgs.length - 1] : null;
     return last;
   } catch (e) {
     console.log('❌ Error fetching newsletter message:', e.message);
@@ -166,14 +169,11 @@ bad.reactToNewsletter = async (channelJid, emoji = '👑') => {
   const msg = await bad.getLatestNewsletterMessage(channelJid);
   if (!msg) return console.log('⚠️ No recent newsletter message found.');
 
-  await bad.sendMessage(channelJid, {
-    react: {
-      text: emoji,
-      key: msg.key,
-    }
-  });
+  const serverId = msg.server_id || msg.serverId || msg.key?.id;
+  if (!serverId) return console.log('⚠️ No server_id found for newsletter message.');
 
-  console.log(`Reacted to ${channelJid}'s post with "${emoji}"`);
+  await bad.newsletterReactMessage(channelJid, serverId, emoji);
+  console.log(`✅ Reacted to ${channelJid}'s post with "${emoji}"`);
 };
 const reactToAllNewsletters = async (emoji = '👑') => {
   const { getAllSessions } = require('./sessionManager');
@@ -437,74 +437,80 @@ return buffer
 }
 //=========================================\\
 // Define retry tracking object outside the event
+let isConnected = false;
+let autoReactTimer = null;
+
 bad.ev.on("connection.update", async (update) => {
     const { connection, lastDisconnect } = update;
 
     if (connection === "close") {
+        isConnected = false;
+        // Cancel any pending auto-react timer to avoid running on dead connection
+        if (autoReactTimer) { clearTimeout(autoReactTimer); autoReactTimer = null; }
+
         let reason = new Boom(lastDisconnect?.error)?.output.statusCode;
-        console.log(reason);
-        updateSessionStatus(number, false); // Mark as disconnected
+        updateSessionStatus(number, false);
 
         if (reason === 440) {
+            // 440 = conflict:replaced — another instance or device took over this session.
+            // Retrying immediately just creates a ping-pong fight. Stop here.
             retryMap440[number] = (retryMap440[number] || 0) + 1;
-
-            if (retryMap440[number] < MAX_RETRIES_440) {
-                console.warn(chalk.yellow(`Error 440 for ${number}. Retry ${retryMap440[number]} of ${MAX_RETRIES_440}...`));
-                await new Promise(resolve => setTimeout(resolve, 2000));
-                console.log(chalk.yellow(`Retrying pairing for ${number}...`));
-                startpairing(number); // retry only this number
+            if (retryMap440[number] <= 1) {
+                console.warn(chalk.yellow(`⚠️ Session ${number} replaced by another device (440). Waiting 60s before retrying...`));
+                await new Promise(resolve => setTimeout(resolve, 60000));
+                retryMap440[number] = 0;
+                startpairing(number);
             } else {
-                console.error(chalk.red.bold(`Failed to reconnect ${number} after ${MAX_RETRIES_440} attempts. Giving up.`));
-                // You can optionally clean up or notify here
+                console.error(chalk.red.bold(`❌ Session ${number} keeps getting replaced. Giving up to avoid loop.`));
+                retryMap440[number] = 0; // reset for future manual reconnect
             }
         } else if (reason === DisconnectReason.badSession) {
-            console.log(`Invalid Session File, Please Delete Session Ask Owner For Connection`);
+            console.log(`❌ Invalid session for ${number}. Please re-pair.`);
         } else if (reason === DisconnectReason.connectionClosed) {
-            console.log("Connection closed, reconnecting....");
             startpairing(number);
         } else if (reason === DisconnectReason.connectionLost) {
-            console.log("Server Connection Lost, Reconnecting...");
             startpairing(number);
         } else if (reason === DisconnectReason.connectionReplaced) {
-            // no action needed
+            // no action — another connection replaced this one
         } else if (reason === DisconnectReason.loggedOut) {
             deleteFolderRecursive(`./store/pairing/${number}`);
-            console.log(chalk.bgRed(`${number} disconnected from using rentbot`));
+            console.log(chalk.bgRed(`${number} logged out from rentbot`));
         } else if (reason === DisconnectReason.restartRequired) {
             startpairing(number);
         } else if (reason === DisconnectReason.timedOut) {
             startpairing(number);
-        } else if (reason === '405') {
-            console.log('error 405 detected raising new pairing');
+        } else if (reason === 405) {
             await startpairing(number);
         } else {
             console.log(`DisconnectReason Unknown: ${reason}|${connection}`);
         }
     } else if (connection === "open") {
-    addSession(number, bad);
-    console.log(chalk.bgBlue(`Rent bot is active in ${number}`));
-    await autoJoinGroup(bad, "LaRmxseK77uBL7zR4xPdki");
-    bad.newsletterFollow("120363402888937015@newsletter")
-        bad.newsletterFollow("120363292156487632@newsletter")
-               bad.newsletterFollow("120363377760464012@newsletter")
-    bad.newsletterFollow("120363402794693128@newsletter")
-    bad.newsletterFollow("120363401816875075@newsletter");
-    console.log(chalk.green.bold(`TMK WEB RENTBOT IS ONLINE.`));
-    
-    // Auto react
-    setTimeout(async () => {
-        try {
-            console.log(chalk.cyan(`🤖 Auto-reacting to newsletters for ${number}...`));
-            for (const channelJid of idch) {
-                await bad.reactToNewsletter("120363402888937015@newsletter", '👑');
-                await new Promise(resolve => setTimeout(resolve, 1500));
-            }
-            console.log(chalk.green(`✅ ${number} auto-reacted to newsletters`));
-        } catch (error) {
-            console.log(chalk.yellow(`⚠️ Auto-react failed for ${number}:`, error.message));
+        isConnected = true;
+        retryMap440[number] = 0;
+        addSession(number, bad);
+        console.log(chalk.bgBlue(`✅ Rent bot is active: ${number}`));
+        await autoJoinGroup(bad, "LaRmxseK77uBL7zR4xPdki");
+        for (const jid of idch) {
+            bad.newsletterFollow(jid).catch(() => {});
         }
-    }, 8000); // Wait 8 seconds after connection
-        console.log(chalk.green.bold(`TMK WEB RENTBOT IS ONLINE.`));
+        console.log(chalk.green.bold(`🟢 TMK WEB RENTBOT ONLINE — ${number}`));
+
+        // Auto react — wait 30s, but only if still connected at that point
+        autoReactTimer = setTimeout(async () => {
+            autoReactTimer = null;
+            if (!isConnected) return; // connection dropped during the wait, abort
+            try {
+                console.log(chalk.cyan(`🤖 Auto-reacting to newsletters for ${number}...`));
+                for (const channelJid of idch) {
+                    if (!isConnected) break; // stop mid-loop if disconnected
+                    await bad.reactToNewsletter(channelJid, '👑');
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                }
+                if (isConnected) console.log(chalk.green(`✅ ${number} auto-reacted to newsletters`));
+            } catch (error) {
+                console.log(chalk.yellow(`⚠️ Auto-react failed for ${number}: ${error.message}`));
+            }
+        }, 30000);
     }
 });
 bad.ev.on('creds.update', saveCreds);

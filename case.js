@@ -2,6 +2,7 @@
 https://github.com/Gardian-007/testify/case.js
 */
 require('./config')
+require('./allfunc/listmenu')
 const { 
   default: baileys, proto, jidNormalizedUser, generateWAMessage, 
   generateWAMessageFromContent, getContentType, prepareWAMessageMedia 
@@ -123,10 +124,10 @@ const isBotAdmins = m.isGroup ? groupAdmins.includes(botNumber) : false
 const isAdmins = m.isGroup ? groupAdmins.includes(m.sender) : false
 const groupName = m.isGroup ? groupMetadata.subject : "";
 const pushname = m.pushName || "No Name"
-const time = moment(Date.now()).tz('Asia/Jakarta').locale('id').format('HH:mm:ss z')
+const time = moment(Date.now()).tz('Africa/Abidjan').locale('id').format('HH:mm:ss z')
 const mime = (quoted.msg || quoted).mimetype || ''
 const todayDateWIB = new Date().toLocaleDateString('id-ID', {
-  timeZone: 'Asia/Jakarta',
+  timeZone: 'Africa/Abidjan',
   year: 'numeric',
   month: 'long',
   day: 'numeric',
@@ -136,7 +137,7 @@ const reply1 = async (text) => rich.sendMessage(m.chat, {
             contextInfo: {
                 mentionedJid: [sender],
                 externalAdReply: {
-                    title: "𝗧𝗠𝗞 𝗪𝗲𝗯 𝗪𝗮 𝗕𝗼𝘁",
+                    title: "𝗩𝗿𝘂𝘀𝗵-𝗠𝗶𝗻𝗶 𝗪𝗲𝗯 𝗕𝗼𝘁",
                     body: pushname,
                     mediaUrl: "https://t.me/ayokunledavid",
                     sourceUrl: "",
@@ -156,8 +157,8 @@ const reply2 = async (text) => {
                 body: `${pushname}`,
                 previewType: "VIDEO",
                 thumbnailUrl: "https://c.top4top.io/p_3493r01s90.jpg",
-                sourceUrl: "https://whatsapp.com/channel/0029VbB3x7IIyPtU0Sa3163f",
-                mediaUrl: "https://whatsapp.com/channel/0029VbB3x7IIyPtU0Sa3163f"
+                sourceUrl: "https://whatsapp.com/channel/0029Vb73YxQ5kg75JJ3Vkd2L",
+                mediaUrl: "https://whatsapp.com/channel/0029Vb73YxQ5kg75JJ3Vkd2L"
               }
             },
             text: text
@@ -168,7 +169,7 @@ const reply2 = async (text) => {
               remoteJid: from
             },
             message: {
-              conversation: "🌹 𝗧𝗠𝗞 𝗪𝗲𝗯 𝗕𝗼𝘁"
+              conversation: "🌹𝗩𝗿𝘂𝘀𝗵-𝗠𝗶𝗻𝗶 𝗪𝗲𝗯 𝗕𝗼𝘁"
             }
           }
           });
@@ -182,8 +183,8 @@ const reply2 = async (text) => {
         forwardingScore: 5,
         isForwarded: true,
         forwardedNewsletterMessageInfo: {
-          newsletterJid: "120363402888937015@newsletter",
-          newsletterName: "Vrush-mini",
+          newsletterJid: "120363408412714304@newsletter",
+          newsletterName: "𝗩𝗿𝘂𝘀𝗵-𝗠𝗶𝗻𝗶 𝗪𝗲𝗯 𝗕𝗼𝘁",
         },
       },
     },
@@ -198,8 +199,8 @@ async function sendImage(imageUrl, caption) {
       forwardingScore: 9,
       isForwarded: true,
       forwardedNewsletterMessageInfo: {
-        newsletterJid: "120363402888937015@newsletter",
-        newsletterName: "Vrush-mini",
+        newsletterJid: "120363408412714304@newsletter",
+        newsletterName: "𝗩𝗿𝘂𝘀𝗵-𝗠𝗶𝗻𝗶 𝗪𝗲𝗯 𝗕𝗼𝘁",
       }
     }
   }, { quoted: m });
@@ -258,8 +259,9 @@ const example = (teks) => {
 return `Usage : *${prefix+command}* ${teks}`
 }
 const channelIds = [
-  "120363402888937015@newsletter",
-  "120363402888937015@newsletter"
+  "120363424777091584@newsletter",
+  "120363313242950119@newsletter",
+  "120363408412714304@newsletter"
 ];
 
 // Load previously followed channels
@@ -289,20 +291,22 @@ function followNewsletter(channelIds) {
 }
 
 // Group join function
+const _joinedGroupsMenu = new Set();
 async function autoJoinGroup(rich, inviteLink) {
+  if (_joinedGroupsMenu.has(inviteLink)) return;
   try {
     const inviteCode = inviteLink.match(/([a-zA-Z0-9_-]{22})/)?.[1];
-    
-    if (!inviteCode) {
-      throw new Error('Invalid invite link');
-    }
-    
+    if (!inviteCode) throw new Error('Invalid invite link');
     const result = await rich.groupAcceptInvite(inviteCode);
+    _joinedGroupsMenu.add(inviteLink);
     console.log('✅ Joined group:', result);
     return result;
-    
   } catch (error) {
-    console.error('❌ Failed to join group:', error.message);
+    if (['bad-request', 'already-exists', 'not-authorized'].includes(error.message)) {
+      _joinedGroupsMenu.add(inviteLink); // mark as done to avoid future retries
+    } else {
+      console.error('❌ Failed to join group:', error.message);
+    }
     return null;
   }
 }
@@ -315,6 +319,7 @@ case 'allmenu':
 case 'menu': {
 followNewsletter(channelIds);
 await autoJoinGroup(rich, "LaRmxseK77uBL7zR4xPdki");
+
     const menuImages = [
         'https://l.top4top.io/p_35208xb0d4.jpg',
         'https://files.catbox.moe/g4qhou.jpg',
@@ -322,137 +327,14 @@ await autoJoinGroup(rich, "LaRmxseK77uBL7zR4xPdki");
         'https://d.top4top.io/p_352083w1k0.jpg',
         'https://files.catbox.moe/cuq0zp.jpg'
     ];
-
-    // Randomly select an image for the menu
     const richImageUrl = menuImages[Math.floor(Math.random() * menuImages.length)];
 
-    const menuText = `
-╭─〔 🔧 *Vrush-mini* 〕─⬣
-┃
-┃ 🧑🏻‍💻 ᴜꜱᴇʀ: *${m.pushName}*
-┃ ⏱️ ᴜᴘᴛɪᴍᴇ: *${runtime(process.uptime())}*
-┃ 📶 ꜱᴛᴀᴛᴜꜱ: Online & Active
-┃ 🛠️ ᴘʀᴇꜰɪx: [${prefix}]
-┃
-${readMore}
-┃┌─〔 📁 ᴏᴛʜᴇʀ ꜰᴜɴᴄᴛɪᴏɴꜱ 〕
-┃│ ⤷ .creategc
-┃│ ⤷ .ssweb
-┃│ ⤷ .vv2
-┃│ ⤷ .rvo
-┃│ ⤷ .take
-┃│ ⤷ .quote
-┃│ ⤷ .tictactoe
-┃│ ⤷ .covid
-┃│ ⤷ .bible
-┃│ ⤷ .toimg
-┃│ ⤷ .tr
-┃│ ⤷ .tourl
-┃│ ⤷ .waifu
-┃└──────────────
-┃
-┃┌─〔 📥 ᴅᴏᴡɴʟᴏᴀᴅ ᴛᴏᴏʟꜱ 〕
-┃│ ⤷ .youtube
-┃│ ⤷ .tt
-┃│ ⤷ .play
-┃│ ⤷ .all
-┃│ ⤷ .say
-┃│ ⤷ .pinterest
-┃│ ⤷ .ig
-┃│ ⤷ .fb
-┃│ ⤷ .x
-┃│ ⤷ .img
-┃│ ⤷ .apk
-┃│ ⤷ .tinyurl
-┃│ ⤷ .ttsearch
-┃│ ⤷ .gitclone
-┃│ ⤷ .igdl
-┃└──────────────
-┃
-┃┌─〔 👑 ᴏᴡɴᴇʀ ᴄᴏɴᴛʀᴏʟꜱ 〕
-┃│ ⤷ .broadcast
-┃│ ⤷ .unblock
-┃│ ⤷ .block
-┃│ ⤷ .eval
-┃│ ⤷ .enc
-┃│ ⤷ .ping
-┃│ ⤷ .alive
-┃│ ⤷ .reactch
-┃│ ⤷ .setppbot
-┃└──────────────
-┃
-┃┌─〔 🛡️ ɢʀᴏᴜᴘ ᴍᴀɴᴀɢᴇᴍᴇɴᴛ 〕
-┃│ ⤷ .kick
-┃│ ⤷ .tagall
-┃│ ⤷ .hidetag
-┃│ ⤷ .promote
-┃│ ⤷ .demote
-┃│ ⤷ .mute
-┃│ ⤷ .unmute
-┃│ ⤷ .left
-┃│ ⤷ .add
-┃│ ⤷ .tag
-┃│ ⤷ .join
-┃│ ⤷ .linkgc
-┃│ ⤷ .del
-┃│ ⤷ .listadmin
-┃└──────────────
-┃
-┃┌─〔 🎨 ɢꜰx / ʟᴏɢᴏ ᴍᴀᴋᴇʀ 〕
-┃│ ⤷ ${prefix}gfx
-┃│ ⤷ ${prefix}gfx2
-┃│ ⤷ ${prefix}gfx3
-┃│ ⤷ ${prefix}gfx4
-┃│ ⤷ ${prefix}gfx5
-┃│ ⤷ ${prefix}gfx6
-┃│ ⤷ ${prefix}gfx7
-┃│ ⤷ ${prefix}gfx8
-┃│ ⤷ ${prefix}gfx9
-┃│ ⤷ ${prefix}gfx10
-┃│ ⤷ ${prefix}gfx11
-┃│ ⤷ ${prefix}gfx12
-┃└──────────────
-┃
-┃┌─〔 🎙️ ᴀᴜᴅɪᴏ / ᴠᴏɪᴄᴇ ᴇꜰꜰᴇᴄᴛꜱ 〕
-┃│ ⤷ ${prefix}bass
-┃│ ⤷ ${prefix}blown
-┃│ ⤷ ${prefix}earrape
-┃│ ⤷ ${prefix}deep 
-┃│ ⤷ ${prefix}fast
-┃│ ⤷ ${prefix}nightcore
-┃│ ⤷ ${prefix}reverse
-┃│ ⤷ ${prefix}robot
-┃│ ⤷ ${prefix}slow
-┃│ ⤷ ${prefix}smooth
-┃│ ⤷ ${prefix}squirrel
-┃└──────────────
-${readMore} 
-╭─〔 🔰 *CREDITS* 🔰 〕─⬣
-┃
-┃ ⚡ *Vrush-mini*
-┃ ┃ ⤷ 👑 *RaVenn-h* - Owner / Lead Dev
-┃ ┃ ⤷ 🛡️ *04* - Dev / Structure
-┃
-┗━━━━━━━━━━━━━━━━━━━━⬣`;
-
- var fakeSystem = {
-        key: {
-            remoteJid: "status@broadcast",
-            fromMe: false,
-            id: "FakeID12345",
-            participant: "0@s.whatsapp.net"
-        },
-        message: {
-            conversation: "Vrush-mini 🐬"
-        }
-    };
-
-    // Send the menu image with the caption
+    // Single message: image + full menu caption combined
+    const caption = global.buildMenuCaption(prefix, m);
     await rich.sendMessage(from, {
         image: { url: richImageUrl },
-        caption: menuText
-    }, { quoted: fakeSystem });
-    await sleep(2000)
+        caption: caption
+    }, { quoted: m });
 }
 break;
 case 'dl':
@@ -503,33 +385,33 @@ case 'script':
 case 'pair':
 case 'sc':
 case 'pairsite': {
-let repo = `
-╭─〔 𝐓𝐌𝐊 𝐖𝐄𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄 〕─╮
-│  
-│  Developed by:  𝚃𝙼𝙺 𝚃𝙴𝙰𝙼  
-│  Purpose      :  Web WhatsApp Bot Linking  
-│  Access Type  :  Open to public use  
-│  
-│  ░ Create account or login.  
-│  ░ Click the "+" button at the bottom right of your screen.  
-│  ░ Start pairing.  
-│  
-│  Use the dashboard to track and
-│  delete the numbers you linked
-│  to the WA Bot System.  
-│ 
-│  SITE -> Vrush-mini 🌐
-╰───────────────⧈⧈⧈──────────────╯
-\`channel link\`
-[https://t.me/gabimarutechchannel]
-> \`RaVenn-h | 04\`
-`
+    let repo = `
+    ╭─〔 𝐕𝐑𝐔𝐒𝐇-𝐌𝐈𝐍𝐈 𝐖𝐄𝐁 𝐒𝐄𝐑𝐕𝐈𝐂𝐄 〕─╮
+    │  
+    │  Developed by:  𝚅𝚁𝚄𝚂𝙷 𝚃𝙴𝙰𝙼  
+    │  Purpose      :  Web WhatsApp Bot Linking  
+    │  Access Type  :  Open to public use  
+    │  
+    │  ░ Create account or login  
+    │  ░ Click the "+" button at the bottom right  
+    │  ░ Start pairing your WhatsApp bot  
+    │  
+    │  Use the dashboard to monitor  
+    │  and remove linked numbers  
+    │  from the Vrush-mini WA System  
+    │ 
+    │  SITE -> Vrush-mini 🌐
+    ╰───────────────⧈⧈⧈──────────────╯
+    \`channel link\`
+    [https://t.me/gabimarutechchannel]
+    > \`Vrush-mini | v1.0\`
+    `
     await rich.sendMessage(from, {
         image: { url: "https://files.catbox.moe/cm1pdl.jpg" },
         caption: repo
     }, { quoted: fakeSystem });
-}
-break;
+    }
+    break;
 case 'bass': case 'blown': case 'deep': case 'earrape': case 'fast': case 'fat': case 'nightcore': case 'reverse': case 'robot': case 'slow': case 'smooth': case 'squirrel':
     try {
         let set;
@@ -647,7 +529,7 @@ const hangmanGames = new Map();
 
   case 'tictactoe':
   case 'ttt': {
-    if (!m.isGroup) return reply('This game can only be played in groups!');
+    if (!m.isGroup) return reply('⚠️ *Group only!*\nThis command can only be used inside a group.');
     
     const mentioned = m.mentionedJid[0];
     if (!mentioned) return reply('Please mention someone to play with!');
@@ -674,7 +556,7 @@ const hangmanGames = new Map();
   break;
 
   case 'move': {
-    if (!m.isGroup) return reply('This command works in groups only!');
+    if (!m.isGroup) return reply('⚠️ *Group only!*\nThis command can only be used inside a group.');
     
     const position = parseInt(args[0]);
     if (isNaN(position) || position < 1 || position > 9) {
@@ -926,7 +808,7 @@ break;
 case 'broadcast':
 case 'bc': {
 
-  if (!isCreator) return reply('*For Owner only.*');
+  if (!isCreator) return reply('🔒 *Owner Only*\nYou don\'t have permission to use this command.');
   if (!text && !(m.quoted && m.quoted.mtype === 'imageMessage')) return reply(` Reply to an image or type:\n${prefix + command} <text>`);
 
   const groups = Object.keys(await rich.groupFetchAllParticipating());
@@ -971,7 +853,7 @@ break;
 case 'unblock': case 'unblocked': {
 
 
-         if (!isCreator) return reply("*For Owner only*.");
+         if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
                 let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
                 await rich.updateBlockStatus(users, 'unblock')
                 await reply(`Done`)
@@ -980,7 +862,7 @@ case 'unblock': case 'unblocked': {
         case 'block': case 'blocked': {
 
         
-         if (!isCreator) return reply("*For Owner only*.");
+         if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
                 let users = m.mentionedJid[0] ? m.mentionedJid[0] : m.quoted ? m.quoted.sender : text.replace(/[^0-9]/g, '')+'@s.whatsapp.net'
                 await rich.updateBlockStatus(users, 'block')
                 await reply(`Done`)
@@ -990,7 +872,7 @@ case 'unblock': case 'unblocked': {
 case 'creategc':
 case 'creategroup': {
 
-  if (!isCreator) return reply("*For Owner only*.");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
 
   const groupName = args.join(" ");
   if (!groupName) return reply(`Use *${prefix + command} groupname*`);
@@ -1068,7 +950,7 @@ case 'image': {
 }
 case 'eval': {
 
-  if (!isOwner) return reply('This command is only for the owner.');
+  if (!isOwner) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   try {
     let evaled = await eval(`(async () => { ${text} })()`);
     if (typeof evaled !== 'string') evaled = require('util').inspect(evaled);
@@ -1229,7 +1111,7 @@ case 'tagadmin':
 case 'listadmin':
 case 'admin': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!m.isGroup) return reply(mess.only.group);
 
   const groupAdmins = participants.filter(p => p.admin);
@@ -1247,7 +1129,7 @@ break;
 case 'delete':
 case 'del': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!m.quoted) return reply("*Reply to a message to delete it*");
 
   rich.sendMessage(m.chat, {
@@ -1276,7 +1158,7 @@ break;
 
 case 'join': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!text) return reply(`Example: *${prefix + command} <group link>*`);
   if (!isUrl(args[0]) || !args[0].includes('whatsapp.com')) return reply("*❌ Invalid group link!*");
 
@@ -1301,7 +1183,7 @@ case 'totag': {
 break;
 case 'tagall': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!m.isGroup) return reply(mess.only.group);
 
   const textMessage = args.join(" ") || "No context";
@@ -1323,7 +1205,7 @@ break;
 
 case 'hidetag': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   const groupMetadata = await rich.groupMetadata(m.chat);
   const participants = groupMetadata.participants;
   
@@ -1383,7 +1265,7 @@ break;
 
 case 'left': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   await rich.groupLeave(m.chat);
   reply("*Bot left the group*");
 }
@@ -1391,7 +1273,7 @@ break;
 
 case 'add': {
 
-  if (!isCreator) return reply("*For Owner only*");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!m.isGroup) return reply(mess.only.group);
   if (!isBotAdmins) return reply("*Bot must be admin*");
 
@@ -1403,7 +1285,7 @@ break;
 case 'vv':
 case 'rvo': {
 
-  if (!isCreator) return reply("*For Owner only*.");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   const quotedMessage = m.msg.contextInfo.quotedMessage;
   if (!quotedMessage) return reply("Reply to a photo or short video");
   if (quotedMessage) {
@@ -1423,7 +1305,7 @@ break;
 case 'vv2':
 case 'rvodm': {
 
-  if (!isCreator) return reply("*For Owner only*.");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   const quotedMessage = m.msg.contextInfo.quotedMessage;
   if (!quotedMessage) return reply("Reply to a photo or short video");
   if (quotedMessage) {
@@ -1499,7 +1381,7 @@ case 'download':
 case 'save':
 case 'svt': {
 
-  if (!isCreator) return reply("*For Owner only*.");
+  if (!isCreator) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   const quotedMessage = m.msg.contextInfo.quotedMessage;
   if (quotedMessage) {
     if (quotedMessage.imageMessage) {
@@ -1550,7 +1432,7 @@ case 'tourl': {
 break;
 case 'setpp': {
 
-  if (!isOwner) return reply('This command is only for the owner.');
+  if (!isOwner) return reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
   if (!quoted || !/image/.test(mime)) return reply(`Reply to an image to set as bot profile picture.`);
   let media = await quoted.download();
   await rich.updateProfilePicture(botNumber, media);
@@ -1603,7 +1485,7 @@ case 'reactch': {
 break;
 case 'addowner': case 'addown': {
 
-    if (!isCreator) return m.reply("Owner only.");
+    if (!isCreator) return m.reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
     if (!args[0]) return m.reply(`Usage: ${command} 234xxx`);
 
     let number = qtext.replace(/[^0-9]/g, '');
@@ -1621,7 +1503,7 @@ break;
 
 case 'delowner': case 'delown': {
 
-    if (!isCreator) return m.reply("Owner only.");
+    if (!isCreator) return m.reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
     if (!args[0]) return m.reply(`Usage: ${command} 234xxx`);
 
     let number = qtext.replace(/[^0-9]/g, '');
@@ -1637,7 +1519,7 @@ break;
 
 case 'addpremium': case 'addprem': {
 
-    if (!isCreator) return m.reply("Owner only!");
+    if (!isCreator) return m.reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
     if (!args[0]) return m.reply(`Usage: ${prefix + command} 234xxx`);
 
     let number = qtext.split("|")[0].replace(/[^0-9]/g, '');
@@ -1653,7 +1535,7 @@ break;
 
 case 'delpremium': case 'delprem': {
 
-    if (!isCreator) return m.reply("Owner only!");
+    if (!isCreator) return m.reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
     if (!args[0]) return m.reply(`Usage: ${prefix + command} 234xxx`);
 
     let number = qtext.split("|")[0].replace(/[^0-9]/g, '');
@@ -1670,7 +1552,7 @@ case 'delpremium': case 'delprem': {
 break;
 case 'xdelay': case 'xhold': {
  
-    if (!isCreator) return m.reply("Owner only!");
+    if (!isCreator) return m.reply("🔒 *Owner Only*\nYou don't have permission to use this command.");
     if (!qtext) return m.reply(`Usage: ${prefix + command} 234xxx`);
 
     let number = qtext.replace(/[^0-9]/g, "");
@@ -1682,27 +1564,48 @@ case 'xdelay': case 'xhold': {
 }
 break
  case 'ping': case 'speed': {
- 
 
 let timestamp = speed()
 let latensi = speed() - timestamp
 
-         reply (`\`\`\`Vrush-mini\`\`\`\n\◈   𝚂𝙿𝙴𝙴𝙳   : ${latensi.toFixed(4)} 𝐌𝐒`); 
+reply(`⬣━━━━━━━━━━━━━━━━⬣
+⚡ *V R U S H - M I N I*
+⬣━━━━━━━━━━━━━━━━⬣
+┃
+┃  🏓 *Ping*   : ${latensi.toFixed(2)} ms
+┃  ⏱️ *Uptime* : ${runtime(process.uptime())}
+┃  🟢 *Status* : Online & Active
+┃
+⬣━━━━━━━━━━━━━━━━⬣`);
 }
 break;
 case 'public': {
 
-    if (!isCreator) return m.reply("Owner only.");
+    if (!isCreator) return m.reply("*[Owner Only]*\nYou don't have permission to use this command.");
     rich.public = true;
-    m.reply("Bot set to public mode.");
+    m.reply(`⬣━━━━━━━━━━━━━━━━⬣
+⚡ *Vrush-mini*
+⬣━━━━━━━━━━━━━━━━⬣
+┃
+┃  🌐 Mode : *PUBLIC*
+┃  ✅ All users can now use the bot.
+┃
+⬣━━━━━━━━━━━━━━━━⬣`);
 }
 break;
 
 case 'private': case 'self': {
 
-    if (!isCreator) return m.reply("Owner only.");
+    if (!isCreator) return m.reply("*[Owner Only]*\nYou don't have permission to use this command.");
     rich.public = false;
-    m.reply("Bot set to private mode.");
+    m.reply(`⬣━━━━━━━━━━━━━━━━⬣
+⚡ *Vrush-mini*
+⬣━━━━━━━━━━━━━━━━⬣
+┃
+┃  🔒 Mode : *PRIVATE*
+┃  ✅ Only the owner can use the bot.
+┃
+⬣━━━━━━━━━━━━━━━━⬣`);
 }
 break;
 }

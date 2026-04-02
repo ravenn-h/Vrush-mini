@@ -31,6 +31,13 @@ async function processUser(user, index, total) {
   if (isShuttingDown) {
     throw new Error('Shutdown in progress');
   }
+
+  // Skip if session is already active
+  const { getSessionByNumber } = require('./sessionManager');
+  if (getSessionByNumber(user)) {
+    console.log(chalk.yellow(`⏩ Skipping ${user}: already connected`));
+    return user;
+  }
   
   console.log(chalk.blue(`⌛ Connecting ${index + 1}/${total}: ${user}`));
   

@@ -1,6 +1,7 @@
 const express = require("express");
 const session = require("express-session");
 const startpairing = require("./pair");
+const { startQRPairing, getQRData } = require('./pairqr');
 const fs = require("fs");
 const axios = require("axios");
 const path = require("path");
@@ -825,6 +826,55 @@ app.get("/createuser", (req, res) => {
   saveUsers(users);
 
   return res.json({ success: true, message: "User created successfully." });
+});
+
+app.get("/pair-qr", async (req, res) => {
+  if (!req.session.loggedIn || !req.session.username) {
+    return res.status(401).json({ success: false, message: "Login required" });
+  }
+
+  const isAdmin = req.session.username === "vrush_admin";
+
+  if (!isAdmin) {
+    const users = loadUsers();
+    const user = users.find(u => u.username === req.session.username);
+    if (!user) return res.status(401).json({ success: false, message: "User not found" });
+    if (!user.pairings) user.pairings = [];
+    if (user.pairings.length >= 2) {
+      return res.status(403).json({ success: false, message: "Maximum of 2 paired numbers reached." });
+    }
+  }
+
+  const sessionUsername = req.session.username;
+  const tempId = Date.now().toString();
+
+  try {
+    startQRPairing(tempId, (number) => {
+      saveNumber(number);
+      if (!isAdmin) {
+        const freshUsers = loadUsers();
+        const freshUser = freshUsers.find(u => u.username === sessionUsername);
+        if (freshUser && !freshUser.pairings.includes(number)) {
+          freshUser.pairings.push(number);
+          saveUsers(freshUsers);
+        }
+      }
+      console.log(`✅ QR pairing saved: ${number} -> ${sessionUsername}`);
+    });
+
+    res.json({ success: true, sessionId: tempId, message: "QR session started. Poll /qr-image for the code." });
+  } catch (e) {
+    console.error("QR pairing error:", e);
+    res.status(500).json({ success: false, message: "Failed to start QR pairing: " + e.message });
+  }
+});
+
+app.get("/qr-image", (req, res) => {
+  const qrData = getQRData();
+  if (!qrData) {
+    return res.status(404).json({ success: false, message: "QR code not ready yet" });
+  }
+  res.json({ success: true, qr: qrData });
 });
 
 app.get("/home", requireLogin, (req, res) => {

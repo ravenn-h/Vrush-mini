@@ -88,19 +88,40 @@
 
     /* ── Tabs ── */
     .tabs {
-      display: flex; margin-bottom: 1.6rem;
-      border-radius: 10px; overflow: hidden;
-      background: rgba(19,1,24,0.5);
-      border: 1px solid rgba(107,33,133,0.4);
+      display: flex;
+      gap: 6px;
+      margin-bottom: 1.6rem;
+      padding: 5px;
+      border-radius: 14px;
+      background: rgba(19,1,24,0.55);
+      border: 1px solid rgba(107,33,133,0.45);
+      box-shadow: inset 0 1px 3px rgba(0,0,0,0.3);
     }
     .tab {
-      flex: 1; padding: 0.7rem;
-      text-align: center; cursor: pointer;
-      font-weight: 600; font-size: 0.9rem;
-      transition: all 0.3s; color: var(--gray);
+      flex: 1;
+      padding: 0.65rem 1rem;
+      text-align: center;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 0.88rem;
+      border-radius: 9px;
+      border: 1px solid transparent;
+      transition: all 0.28s cubic-bezier(0.4,0,0.2,1);
+      color: var(--gray);
+      user-select: none;
+      white-space: nowrap;
     }
-    .tab.active { background: linear-gradient(135deg,#7c2d9e,#5b1a80); color: white; }
-    .tab:not(.active):hover { background: rgba(192,38,211,0.1); color: var(--light); }
+    .tab.active {
+      background: linear-gradient(135deg, #7c2d9e, #5b1a80);
+      color: white;
+      border-color: rgba(192,38,211,0.4);
+      box-shadow: 0 2px 12px rgba(192,38,211,0.3), 0 1px 0 rgba(255,255,255,0.06) inset;
+    }
+    .tab:not(.active):hover {
+      background: rgba(192,38,211,0.1);
+      color: var(--light);
+      border-color: rgba(107,33,133,0.3);
+    }
 
     /* ── Form ── */
     .form-group { margin-bottom: 1.3rem; }
